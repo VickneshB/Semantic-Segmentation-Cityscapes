@@ -23,7 +23,7 @@ import os
 
 import pycuda.driver as cuda
 
-def Net():
+'''def Net():
     print("Loading in pretrained network ...")
     model = models.resnet101(pretrained=True)    # Get pretrained network
     for param in model.parameters():
@@ -36,6 +36,28 @@ def Net():
     # Parameters of newly constructed modules have requires_grad=True by default.
     num_classes = 30
     model.fc = nn.conv1 = nn.Conv2d(num_features, num_classes, kernel_size=3, padding=1)
+    return model'''
+def Net():
+    print("Loading in pretrained network ...")
+    model = models.segmentation.fcn_resnet101(pretrained=True).eval().cuda()
+    for param in model.parameters():
+        param.requires_grad = False
+
+    '''num_features = model.fc.in_features
+    print("Number of inputs to final fully connected layer: %d" % num_features)
+
+    # Change final layer.
+    # Parameters of newly constructed modules have requires_grad=True by default.
+    num_classes = 30
+    model.fc = nn.conv1 = nn.Conv2d(num_features, num_classes, kernel_size=3, padding=1)'''
+    model.aux_classifier = nn.Sequential(
+    nn.Conv2d(1024, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False),
+    nn.BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+    nn.ReLU(),
+    nn.Dropout(p=0.2, inplace=False),
+    nn.Conv2d(256, 30, kernel_size=(1, 1), stride=(1, 1))
+    )
+    print(model)
     return model
 
 class Cityscapes(Dataset):
@@ -49,21 +71,21 @@ class Cityscapes(Dataset):
 
 def train_model(model, train_loader, val_loader, epochs=1):
     learning_rate = 1e-4
-    optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.aux_classifier.parameters(), lr=learning_rate)
 
+    entropyLoss = nn.CrossEntropyLoss()
     model = model.cuda()  # move the model parameters to CPU/GPU
     for e in range(epochs):
         print("Epoch: ", e)
         for t, (x, y) in enumerate(train_loader):
             model.train()  # put model to training mode
-            x = x.cuda()  # move to device, e.g. GPU
-            y = y.squeeze()
+            x = x.cuda()
             y = y.type(torch.LongTensor)
             y = y.cuda()
 
-            scores = model(x)
-            print(scores.shape,y.shape)
-            loss = F.cross_entropy(scores, y)
+            scores = model(x)['out']
+            print(x.shape,y.shape,scores.shape)
+            loss = entropyLoss(scores, y)
 
             # Zero out all of the gradients for the variables which the optimizer
             # will update.
@@ -107,7 +129,7 @@ def decode_segmap(image, nc=21):
 
 def semantic_segmentation(model, start_time, name):
 
-    video = cv2.VideoCapture(2)
+    video = cv2.VideoCapture("VID_20200422_173227.mp4")
     is_ok, bgr_image_input = video.read()
     #print(bgr_image_input.shape)
     frameNo = 0
@@ -118,7 +140,7 @@ def semantic_segmentation(model, start_time, name):
 
     h1 = bgr_image_input.shape[0]
     w1 = bgr_image_input.shape[1]
-    print(h1,w1)
+    ##print(h1,w1)
 
     try:
         fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
@@ -140,7 +162,7 @@ def semantic_segmentation(model, start_time, name):
         input_image = transform(Image.fromarray(bgr_image_input)).unsqueeze(0)
         input_image = input_image.cuda()
 
-        out = model(inp)['out']
+        out = model(input_image)['out']
         #print(out.shape)
 
         om = torch.argmax(out.squeeze(), dim=0).detach().cpu().numpy()
@@ -312,34 +334,34 @@ def main():
     
 
     start_time = time.time()
-    #semantic_segmentation(deeplab, start_time, "DeepLabV3")
+    semantic_segmentation(deeplab, start_time, "DeepLabV3")
     #semantic_segmentation_image(deeplab, 'police.jpg', start_time, "DeepLabV3")
     #semantic_segmentation_cityscapes(cityscapes, 'police.jpg')
-    print(fcn)
-    try:
+    '''try:
         model = torch.load('resnet101_cityscapes.model')
     except:
         model = Net()
         model = model.cuda()
         train_transform = transforms.Compose([
-            transforms.RandomResizedCrop(size=224, scale=(0.9,1.0), ratio=(0.9,1.1)),
+            #transforms.RandomResizedCrop(size=224, scale=(0.9,1.0), ratio=(0.9,1.1)),
+            #transforms.Resize(256),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
         ])
         test_transform = transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
+            #transforms.Resize(256),
+            #transforms.CenterCrop(224),
             transforms.ToTensor(),
             transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
         ])
         print("HHH")
         #cityscapes = datasets.Cityscapes('./Cityscapes/', split='train_extra', mode='coarse', target_type='semantic', transform = transform)
         train_dataset = Cityscapes(root = "./Cityscapes", split="train", transform=train_transform)
-        '''num_images = len(train_val_dataset)
+        num_images = len(train_val_dataset)
         num_train = int(0.6 * num_images)
         num_val = num_images - num_train
-        #num_test = num_images - num_train - num_val'''
+        #num_test = num_images - num_train - num_val
         print("A")
         val_dataset = Cityscapes(root = "./Cityscapes", split="val", transform=train_transform)
         print("Number of training images: %d" % len(train_dataset))
@@ -354,9 +376,12 @@ def main():
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=3, shuffle=True, num_workers=1)
         print("Number of test images: %d" % len(test_dataset))
         print("D")
+        torch.save(train_loader,'train_loader')
+        torch.save(val_loader,'val_loader')
+        torch.save(test_loader,'test_loader')
         train_model(model, train_loader, val_loader, epochs=3)
         print("E")
-        torch.save(model, 'resnet101_cityscapes.model')
+        torch.save(model, 'resnet101_cityscapes.model')'''
 
     #cv2.waitKey(0)
 
