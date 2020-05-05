@@ -8,11 +8,17 @@
 	$ pip3 install -r requirements.txt
 	```
 3.  Run either of the below of your choice.
+	```
+	$ python3 main.py -m model_name -p path_to_video_if_any
+	```
+for example,
+
 (a)  Run
 	```
 	$ python3 main.py -m fcn-resnet101
 	```
 to run the FCN-Resnet101 model for live video, 
+
 or run
      	```
      	$ python3 main.py -m fcn-resnet101 -p path_to_video
@@ -24,6 +30,7 @@ to run the FCN-Resnet101 model for a recorded video.
 	$ python3 main.py -m deeplabv3-resnet101
 	```
 to run the DeepLabV3-Resnet101 model for live video
+
 or run
 	```
      	$ python3 main.py -m deeplabv3-resnet101 -p path_to_video
