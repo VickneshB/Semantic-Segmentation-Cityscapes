@@ -36,3 +36,8 @@ or run
      	$ python3 main.py -m deeplabv3-resnet101 -p path_to_video
 	```
 to run the DeepLabV3-Resnet101 model for a recorded video.
+
+
+Click below for VIDEO:
+
+[![Watch the video](https://img.youtube.com/vi/Zh-Ws4peAs0/sddefault.jpg)](https://youtu.be/Zh-Ws4peAs0)
