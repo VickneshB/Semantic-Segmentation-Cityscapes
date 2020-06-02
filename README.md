@@ -40,4 +40,4 @@ to run the DeepLabV3-Resnet101 model for a recorded video.
 
 Click below for VIDEO:
 
-[![Watch the video](https://img.youtube.com/vi/Zh-Ws4peAs0/sddefault.jpg)](https://youtu.be/Zh-Ws4peAs0)
+[![Watch the video] <img src=https://img.youtube.com/vi/Zh-Ws4peAs0/3.jpg width = 50%>](https://youtu.be/Zh-Ws4peAs0)
