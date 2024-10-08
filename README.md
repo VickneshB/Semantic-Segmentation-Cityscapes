@@ -38,13 +38,15 @@ The dataset should be organized as follows:
 
 ```bash
 ├── leftImg8bit_trainvaltest/
-│   ├── train/
-│   ├── val/
-│   ├── test/
+│   ├── leftImg8bit
+│      ├── train/
+│      ├── val/
+│      ├── test/
 ├── gtFine_trainvaltest/
-│   ├── train/
-│   ├── val/
-│   ├── test/
+│   ├── gtFine
+│      ├── train/
+│      ├── val/
+│      ├── test/
 ```
 
 ## Model Training
